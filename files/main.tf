@@ -1,6 +1,6 @@
 # ============================================================
 # Internal Developer Platform — Root Module
-# Reads infra.yaml and provisions AWS resources per tenant
+# Reads infra-management/infra.yaml and provisions AWS resources per tenant
 # ============================================================
 
 terraform {
@@ -44,7 +44,7 @@ provider "vault" {
 }
 
 locals {
-  config      = yamldecode(file("${path.module}/infra.yaml"))
+  config      = yamldecode(file("${path.module}/infra-management/infra.yaml"))
   tenant_name = trimspace(local.config.tenant_name)
   env         = trimspace(local.config.environment)
 
@@ -103,7 +103,7 @@ resource "terraform_data" "workflow_validation" {
 
     precondition {
       condition     = length(local.enabled_resources) > 0
-      error_message = "At least one resource must be enabled in infra.yaml."
+      error_message = "At least one resource must be enabled in infra-management/infra.yaml."
     }
 
     precondition {
@@ -267,20 +267,4 @@ module "slack_notify" {
   estimated_cost_value = local.monthly_cost_estimate
 
   depends_on = [module.vault_inject]
-}
-
-output "tenant_name" {
-  value = local.tenant_name
-}
-
-output "environment" {
-  value = local.env
-}
-
-output "enabled_resources" {
-  value = local.enabled_resources
-}
-
-output "estimated_monthly_cost" {
-  value = local.monthly_cost_estimate
 }

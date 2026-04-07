@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONFIG_FILE="${1:-infra.yaml}"
+CONFIG_FILE="${1:-infra-management/infra.yaml}"
 
 tenant_name="$(yq -r '.tenant_name' "$CONFIG_FILE")"
 environment="$(yq -r '.environment' "$CONFIG_FILE")"

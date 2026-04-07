@@ -63,13 +63,13 @@ variable "allowed_ec2_instance_types" {
 }
 
 variable "default_ec2_ami_id" {
-  description = "Default AMI for EC2 requests when none is supplied in infra.yaml."
+  description = "Default AMI for EC2 requests when none is supplied in infra-management/infra.yaml."
   type        = string
   default     = "ami-xxxxxxxxxxxxxxxxx"
 }
 
 variable "default_rds_backup_retention_days" {
-  description = "Default RDS backup retention days when none is supplied in infra.yaml."
+  description = "Default RDS backup retention days when none is supplied in infra-management/infra.yaml."
   type        = number
   default     = 7
 }

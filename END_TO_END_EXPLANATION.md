@@ -7,7 +7,7 @@ This repository models an Internal Developer Platform for infrastructure provisi
 The main idea is simple:
 
 - developers do not write raw Terraform modules for every request
-- developers describe what they need in `files/infra.yaml`
+- developers describe what they need in `files/infra-management/infra.yaml`
 - the repository and pipeline enforce standards, validation, governance, and review
 - approved changes are applied through reusable Terraform modules
 
@@ -190,7 +190,7 @@ For demo mode in this repo:
 A developer using this repo should understand:
 
 - how to create a Git branch
-- how to edit `infra.yaml`
+- how to edit `infra-management/infra.yaml`
 - how to open a pull request
 - what each environment means
 - which resource types are available
@@ -224,7 +224,7 @@ Everything operational lives under `files/`.
 - `files/variables.tf`
   Defines Terraform inputs from env tfvars, secrets, or defaults.
 
-- `files/infra.yaml`
+- `files/infra-management/infra.yaml`
   The developer request surface.
 
 - `files/terraform.tfvars`
@@ -259,7 +259,7 @@ Everything operational lives under `files/`.
   Sends a Slack summary after provisioning.
 
 - `files/scripts/policy-check.sh`
-  Shell-based policy gate for early validation of `infra.yaml`.
+  Shell-based policy gate for early validation of `infra-management/infra.yaml`.
 
 ## 4.3 GitHub workflow location
 
@@ -295,9 +295,9 @@ Purpose of the branch:
 - keep unreviewed changes out of `main`
 - let CI run on a safe branch before any apply can happen
 
-## 5.2 Step 2: Developer edits `files/infra.yaml`
+## 5.2 Step 2: Developer edits `files/infra-management/infra.yaml`
 
-The developer describes the request in `files/infra.yaml`.
+The developer describes the request in `files/infra-management/infra.yaml`.
 
 This file contains things like:
 
@@ -324,7 +324,7 @@ Example intent:
 Example:
 
 ```bash
-git add files/infra.yaml
+git add files/infra-management/infra.yaml
 git commit -m "Request staging infrastructure for acme-corp"
 git push origin feature/acme-staging-rds-request
 ```
@@ -360,13 +360,13 @@ For the developer PR path, the important event is `pull_request`.
 
 The PR trigger watches these paths:
 
-- `files/infra.yaml`
+- `files/infra-management/infra.yaml`
 - `files/**/*.tf`
 - `files/**/*.tfvars`
 - `files/scripts/**`
 - `.github/workflows/idp-pipeline.yml`
 
-So if a developer changes `infra.yaml`, Terraform files, tfvars files, or the workflow itself, the pipeline runs.
+So if a developer changes `infra-management/infra.yaml`, Terraform files, tfvars files, or the workflow itself, the pipeline runs.
 
 ## 5.6 Step 6: Who reviews the pull request
 
@@ -441,15 +441,15 @@ A pull request gives visibility and review, not infrastructure mutation.
 
 Purpose:
 
-- read the request metadata from `files/infra.yaml`
+- read the request metadata from `files/infra-management/infra.yaml`
 - expose values for downstream jobs
 
 What it does:
 
 - checks out the repository
 - installs `yq`
-- reads `.environment` from `infra.yaml`
-- reads `.tenant_name` from `infra.yaml`
+- reads `.environment` from `infra-management/infra.yaml`
+- reads `.tenant_name` from `infra-management/infra.yaml`
 - writes those values into GitHub Actions outputs
 
 Why this matters:
@@ -471,7 +471,7 @@ What it does:
 
 - checks out the repository
 - installs `yq`
-- runs `./scripts/policy-check.sh infra.yaml`
+- runs `./scripts/policy-check.sh infra-management/infra.yaml`
 
 What the shell script validates:
 
@@ -612,11 +612,11 @@ This is useful for:
 
 ## 7. How the PR becomes a merge to `main`
 
-This is the sequence that answers your question about how `infra.yaml` gets pushed to `main`.
+This is the sequence that answers your question about how `infra-management/infra.yaml` gets pushed to `main`.
 
 ## 7.1 The request exists only in the feature branch at first
 
-When the developer edits `infra.yaml` in their branch, only that branch contains the change.
+When the developer edits `infra-management/infra.yaml` in their branch, only that branch contains the change.
 
 `main` is untouched.
 
@@ -646,9 +646,9 @@ That push retriggers the PR pipeline.
 
 After approvals and required checks pass, someone merges the PR in GitHub.
 
-That merge is what actually moves the updated `infra.yaml` into `main`.
+That merge is what actually moves the updated `infra-management/infra.yaml` into `main`.
 
-So the answer to "how does `infra.yaml` get pushed to main?" is:
+So the answer to "how does `infra-management/infra.yaml` get pushed to main?" is:
 
 - it is first committed on a feature branch
 - then reviewed through a pull request
@@ -664,7 +664,7 @@ That triggers the `approval-gate` and `terraform-apply` path in the workflow.
 
 This is the moment where real infrastructure can be changed.
 
-## 8. Detailed explanation of `files/infra.yaml`
+## 8. Detailed explanation of `files/infra-management/infra.yaml`
 
 This file is the self-service request contract.
 
@@ -725,7 +725,7 @@ Examples:
 
 This script is the fast, lightweight policy gate before Terraform plan.
 
-It uses `yq` to parse `infra.yaml` and validate key rules.
+It uses `yq` to parse `infra-management/infra.yaml` and validate key rules.
 
 Step by step, it does the following:
 
@@ -1096,7 +1096,7 @@ If `terraform apply` fails:
 
 A simple way to understand the project is:
 
-- `infra.yaml` is the request
+- `infra-management/infra.yaml` is the request
 - `policy-check.sh` is the fast rule checker
 - `main.tf` is the orchestrator
 - modules are the standardized implementation units
@@ -1114,10 +1114,10 @@ Here is the full story in one pass.
 
 1. A developer needs infrastructure.
 2. The developer creates a branch from `main`.
-3. The developer edits `files/infra.yaml` to request resources.
+3. The developer edits `files/infra-management/infra.yaml` to request resources.
 4. The developer commits and pushes the branch.
 5. The developer opens a PR targeting `main`.
-6. GitHub Actions triggers because `infra.yaml` changed.
+6. GitHub Actions triggers because `infra-management/infra.yaml` changed.
 7. `load-config` reads `tenant_name` and `environment`.
 8. `validate-request` runs `policy-check.sh`.
 9. `terraform-plan` runs `fmt`, `init`, `validate`, and `plan`.
@@ -1132,7 +1132,7 @@ Here is the full story in one pass.
 18. `approval-gate` routes the deployment through the correct GitHub Environment.
 19. If environment approval is configured, an authorized approver must approve.
 20. `terraform-apply` runs after approval.
-21. Terraform reads the merged `infra.yaml` from `main`.
+21. Terraform reads the merged `infra-management/infra.yaml` from `main`.
 22. Terraform loads the matching environment tfvars file.
 23. Terraform uses secret inputs for Vault and Slack from GitHub secrets.
 24. `main.tf` validates the request and orchestrates the modules.
@@ -1149,7 +1149,7 @@ This repository is not just Terraform code. It is a controlled delivery system f
 
 It combines:
 
-- developer self-service through `infra.yaml`
+- developer self-service through `infra-management/infra.yaml`
 - governance through PR review
 - fast policy validation through shell scripting
 - standardized resource creation through reusable Terraform modules

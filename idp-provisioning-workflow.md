@@ -2,8 +2,8 @@
 
 ```mermaid
 flowchart TD
-    A[Developer identifies infrastructure requirement<br/>RDS or Redis or EC2 or S3] --> B[Create YAML request configuration]
-    B --> C[Commit config to infra management repository<br/>dev or test or qa or staging or production]
+    A[Developer identifies infrastructure requirement<br/>RDS or Redis or EC2 or S3] --> B[Update files/infra-management/infra.yaml]
+    B --> C[Commit request in feature branch<br/>dev or test or qa or staging or production]
     C --> D[Raise pull request]
     D --> E[Platform engineering review]
     E --> F{Validation checks}
@@ -15,7 +15,7 @@ flowchart TD
     F --> F6[Monitoring and backup requirements]
     F --> G[Engineering lead or manager approval]
     G --> H[Merge PR into main]
-    H --> I[CI or CD pipeline triggered]
+    H --> I[Pipeline triggered by files/infra-management/infra.yaml]
     I --> J[Terraform fmt and validate]
     J --> K[Policy as code checks]
     K --> L[Terraform plan]

@@ -1,6 +1,6 @@
 # Terraform Internal Developer Platform
 
-This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform. Developers submit a single [`infra.yaml`](./files/infra.yaml) request, open a pull request, and the platform pipeline validates, plans, approves, and applies infrastructure through standardized Terraform modules.
+This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform. Developers submit a single [`infra.yaml`](./files/infra-management/infra.yaml) request, open a pull request, and the platform pipeline validates, plans, approves, and applies infrastructure through standardized Terraform modules.
 
 ## What The Platform Does
 
@@ -14,7 +14,7 @@ This repository implements a GitHub-driven Internal Developer Platform (IDP) for
 
 ## Supported Resources
 
-The current implementation supports these optional resource blocks in [`files/infra.yaml`](./files/infra.yaml):
+The current implementation supports these optional resource blocks in [`files/infra-management/infra.yaml`](./files/infra-management/infra.yaml):
 
 - `rds`: PostgreSQL, encrypted storage, backups, CloudWatch CPU alarm, Multi-AZ required in production
 - `redis`: ElastiCache Redis, private subnet placement, CloudWatch CPU alarm
@@ -32,7 +32,7 @@ Every request also creates or uses:
 The workflow file is [`idp-pipeline.yml`](./.github/workflows/idp-pipeline.yml).
 
 - `pull_request` to `main`
-  - triggers when `files/infra.yaml`, Terraform files, tfvars, scripts, or the workflow change
+  - triggers when `files/infra-management/infra.yaml`, Terraform files, tfvars, scripts, or the workflow change
   - runs request loading, policy validation, `terraform fmt`, `terraform validate`, and `terraform plan`
   - uploads a plan artifact and comments the plan summary on the PR
 - `push` to `main`
@@ -48,7 +48,7 @@ The workflow file is [`idp-pipeline.yml`](./.github/workflows/idp-pipeline.yml).
 
 ```mermaid
 flowchart TD
-    A[Developer updates files/infra.yaml] --> B[Open pull request to main]
+    A[Developer updates files/infra-management/infra.yaml] --> B[Open pull request to main]
     B --> C[Load request config]
     C --> D[Validate YAML and policy rules]
     D --> E[Terraform fmt and validate]
@@ -135,7 +135,8 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
 ├── idp-provisioning-workflow.md
 ├── internal-tf-module-execution-layer.md
 └── files
-    ├── infra.yaml
+    ├── infra-management
+    │   └── infra.yaml
     ├── main.tf
     ├── variables.tf
     ├── terraform.tfvars

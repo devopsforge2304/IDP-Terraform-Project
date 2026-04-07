@@ -59,16 +59,3 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
     CacheClusterId = aws_elasticache_cluster.this.id
   }
 }
-
-variable "tenant_name" { type = string }
-variable "environment" { type = string }
-variable "node_type" { type = string }
-variable "num_cache_nodes" { type = number }
-variable "subnet_ids" { type = list(string) }
-variable "vpc_id" { type = string }
-variable "monitor_actions" { type = list(string) }
-variable "tags" { type = map(string) }
-
-output "endpoint" {
-  value = aws_elasticache_cluster.this.cache_nodes[0].address
-}

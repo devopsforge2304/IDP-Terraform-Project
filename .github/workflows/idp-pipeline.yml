@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'files/infra.yaml'
+      - 'files/infra-management/infra.yaml'
       - 'files/**/*.tf'
       - 'files/**/*.tfvars'
       - 'files/scripts/**'
@@ -12,7 +12,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'files/infra.yaml'
+      - 'files/infra-management/infra.yaml'
       - 'files/**/*.tf'
       - 'files/**/*.tfvars'
       - 'files/scripts/**'
@@ -25,6 +25,7 @@ env:
   TF_VERSION: "1.7.5"
   AWS_REGION: "ap-south-1"
   TF_WORKING_DIR: "files"
+  REQUEST_CONFIG_PATH: "infra-management/infra.yaml"
 
 jobs:
   load-config:
@@ -46,8 +47,8 @@ jobs:
         name: Read infra.yaml
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
-          echo "environment=$(yq -r '.environment' infra.yaml)" >> "$GITHUB_OUTPUT"
-          echo "tenant_name=$(yq -r '.tenant_name' infra.yaml)" >> "$GITHUB_OUTPUT"
+          echo "environment=$(yq -r '.environment' '${{ env.REQUEST_CONFIG_PATH }}')" >> "$GITHUB_OUTPUT"
+          echo "tenant_name=$(yq -r '.tenant_name' '${{ env.REQUEST_CONFIG_PATH }}')" >> "$GITHUB_OUTPUT"
 
   validate-request:
     name: Validate request and policy
@@ -64,7 +65,7 @@ jobs:
 
       - name: Validate YAML schema
         working-directory: ${{ env.TF_WORKING_DIR }}
-        run: ./scripts/policy-check.sh infra.yaml
+        run: ./scripts/policy-check.sh "${{ env.REQUEST_CONFIG_PATH }}"
 
   terraform-plan:
     name: Terraform fmt, validate, and plan

@@ -74,23 +74,3 @@ resource "aws_iam_role_policy_attachment" "tenant" {
   role       = aws_iam_role.tenant.name
   policy_arn = aws_iam_policy.tenant.arn
 }
-
-variable "tenant_name" { type = string }
-variable "environment" { type = string }
-variable "enable_rds" { type = bool }
-variable "enable_s3" { type = bool }
-variable "enable_redis" { type = bool }
-variable "enable_ec2" { type = bool }
-variable "tags" { type = map(string) }
-
-output "role_arn" {
-  value = aws_iam_role.tenant.arn
-}
-
-output "role_name" {
-  value = aws_iam_role.tenant.name
-}
-
-output "instance_profile_name" {
-  value = aws_iam_instance_profile.tenant.name
-}

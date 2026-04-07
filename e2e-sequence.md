@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart LR
-    DevRequest[Developer request] --> PR[Pull request]
+    DevRequest[Developer updates files/infra-management/infra.yaml] --> PR[Pull request]
     PR --> PlatformReview[Platform review]
     PlatformReview --> ApprovalGate[Approval gate]
     ApprovalGate --> MergeMain[Merge to main]
