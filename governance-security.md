@@ -1,20 +1,14 @@
+# Governance And Security
+
+```mermaid
 flowchart TD
-
-A[Terraform Execution Request]
---> B[Permission Boundary Check]
-
-B --> C[IAM Role Validation]
-
-C --> D[Secrets Retrieval\n(HashiCorp Vault / AWS Secrets Manager)]
-
-D --> E[Remote State Locking]
-
-E --> F[Drift Detection]
-
-F --> G[Policy Compliance Engine]
-
-G --> H{Compliant?}
-
-H -->|Yes| I[Apply Infrastructure]
-
-H -->|No| J[Pipeline Blocked]
+    A[Terraform execution request] --> B[Permission boundary check]
+    B --> C[IAM role validation]
+    C --> D[Secrets retrieval<br/>HashiCorp Vault or AWS Secrets Manager]
+    D --> E[Remote state locking]
+    E --> F[Drift detection]
+    F --> G[Policy compliance engine]
+    G --> H{Compliant?}
+    H -->|Yes| I[Apply infrastructure]
+    H -->|No| J[Pipeline blocked]
+```

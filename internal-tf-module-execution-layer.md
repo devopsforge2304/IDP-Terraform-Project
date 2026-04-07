@@ -1,28 +1,21 @@
+# Internal Terraform Module Execution Layer
+
+```mermaid
 flowchart LR
-
-A[YAML Request Input]
---> B[Environment tfvars loaded]
-
-B --> C[Terraform Root Module]
-
-C --> D[RDS Module]
-C --> E[Redis Module]
-C --> F[EC2 Module]
-C --> G[S3 Module]
-
-D --> H[Attach IAM Role]
-E --> H
-F --> H
-G --> H
-
-H --> I[Apply Security Groups]
-
-I --> J[Select Private Subnets]
-
-J --> K[Enable Encryption]
-
-K --> L[Attach Monitoring + Alerts]
-
-L --> M[Apply Mandatory Tags]
-
-M --> N[Provision Resource]
+    A[YAML request input] --> B[Environment tfvars loaded]
+    B --> C[Terraform root module]
+    C --> D[RDS module]
+    C --> E[Redis module]
+    C --> F[EC2 module]
+    C --> G[S3 module]
+    D --> H[Attach IAM role]
+    E --> H
+    F --> H
+    G --> H
+    H --> I[Apply security groups]
+    I --> J[Select private subnets]
+    J --> K[Enable encryption]
+    K --> L[Attach monitoring and alerts]
+    L --> M[Apply mandatory tags]
+    M --> N[Provision resource]
+```

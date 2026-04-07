@@ -1,13 +1,16 @@
-flowchart LR
+# End-To-End Sequence
 
-DevRequest --> PR
-PR --> PlatformReview
-PlatformReview --> ApprovalGate
-ApprovalGate --> MergeMain
-MergeMain --> PipelineTrigger
-PipelineTrigger --> TerraformPlan
-TerraformPlan --> PolicyCheck
-PolicyCheck --> TerraformApply
-TerraformApply --> ResourceProvisioned
-ResourceProvisioned --> StateRecorded
-StateRecorded --> MonitoringAttached
+```mermaid
+flowchart LR
+    DevRequest[Developer request] --> PR[Pull request]
+    PR --> PlatformReview[Platform review]
+    PlatformReview --> ApprovalGate[Approval gate]
+    ApprovalGate --> MergeMain[Merge to main]
+    MergeMain --> PipelineTrigger[Pipeline trigger]
+    PipelineTrigger --> TerraformPlan[Terraform plan]
+    TerraformPlan --> PolicyCheck[Policy check]
+    PolicyCheck --> TerraformApply[Terraform apply]
+    TerraformApply --> ResourceProvisioned[Resources provisioned]
+    ResourceProvisioned --> StateRecorded[State recorded]
+    StateRecorded --> MonitoringAttached[Monitoring attached]
+```
