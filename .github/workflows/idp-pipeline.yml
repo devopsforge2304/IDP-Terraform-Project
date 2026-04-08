@@ -102,8 +102,8 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Terraform validate
         run: terraform validate
@@ -117,8 +117,8 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
@@ -180,8 +180,8 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Detect drift
         run: |
@@ -190,8 +190,8 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
   approval-gate:
     name: Approval gate
@@ -234,8 +234,8 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
       - name: Terraform apply
         run: |
@@ -244,5 +244,5 @@ jobs:
         env:
           TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
           TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
-          TF_VAR_slack_bot_token: ${{ secrets.SLACK_BOT_TOKEN }}
-          TF_VAR_slack_channel_id: ${{ secrets.SLACK_CHANNEL_ID }}
+          TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
+          TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
