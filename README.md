@@ -1,6 +1,6 @@
 # Terraform Internal Developer Platform
 
-This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform. Developers submit a single [`infra.yaml`](./files/infra-management/infra.yaml) request, open a pull request, and the platform pipeline validates, plans, approves, and applies infrastructure through standardized Terraform modules.
+This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform. Developers submit a single [`infra.yaml`](./files/infra-management/infra.yaml) request, open a pull request, and the platform pipeline validates, plans, approves, and applies infrastructure through standardized Terraform modules. The intended operating model is workflow-only: GitHub Actions runs plan and apply, and local Terraform execution is not required for the demo path.
 
 ## What The Platform Does
 
@@ -43,6 +43,21 @@ The workflow file is [`idp-pipeline.yml`](./.github/workflows/idp-pipeline.yml).
   - runs daily drift detection at `0 2 * * *`
 - `workflow_dispatch`
   - allows manual execution
+
+## Workflow-Only Operating Model
+
+- edit [`files/infra-management/infra.yaml`](./files/infra-management/infra.yaml) in a branch
+- open a pull request to run validation and `terraform plan`
+- merge to `main` to make the request eligible for deployment
+- approve the matching GitHub Environment when required
+- let GitHub Actions run `terraform apply`
+
+For this repository:
+
+- workflow secrets supply Vault and Gmail credentials at runtime
+- environment `.tfvars` files supply VPC and subnet IDs
+- at least two private subnets are required
+- `production` requests map to `files/environments/prod.tfvars`
 
 ## Request Flow
 
@@ -168,6 +183,62 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
 - `GMAIL_SENDER_EMAIL`
 - `GMAIL_APP_PASSWORD`
 
+## Required GitHub Environments
+
+Create these GitHub Environments in the repository settings:
+
+- `idp-nonprod`
+- `idp-production`
+
+Why they matter:
+
+- they are the post-merge approval gate for deployments
+- `production` routes to `idp-production`
+- `dev`, `test`, `qa`, and `staging` route to `idp-nonprod`
+- they separate PR review from deployment authorization
+
+## AWS Role Requirements
+
+The workflow assumes an IAM role named `GitHubActionsRole`.
+
+That role must:
+
+- trust GitHub OIDC and allow `sts:AssumeRoleWithWebIdentity`
+- access the S3 backend bucket and DynamoDB lock table
+- create and manage the AWS resources used by the Terraform modules
+
+At a minimum, backend access must cover:
+
+- `s3:ListBucket`
+- `s3:GetBucketLocation`
+- `s3:GetObject`
+- `s3:PutObject`
+- `s3:DeleteObject`
+- `dynamodb:DescribeTable`
+- `dynamodb:GetItem`
+- `dynamodb:PutItem`
+- `dynamodb:UpdateItem`
+- `dynamodb:DeleteItem`
+
+Provisioning access must cover the services used in this project:
+
+- EC2, including security groups, instances, volumes, snapshots, tags, and VPC lookups
+- RDS, including DB instances and DB subnet groups
+- ElastiCache, including cache clusters and subnet groups
+- IAM, including roles, policies, and instance profiles
+- S3, including bucket policy, encryption, versioning, lifecycle, and public access block
+- CloudWatch alarms
+- KMS if you use customer-managed KMS keys in the environment files
+
+## Vault And Gmail Setup
+
+This repository expects:
+
+- Vault KV v2 mounted at `secret/`
+- Terraform writes to `secret/idp/<environment>/<tenant>`
+- a Gmail account with 2-Step Verification enabled
+- a Gmail App Password stored in `GMAIL_APP_PASSWORD`
+
 ## Environment Tfvars Inputs
 
 Each file in [`files/environments/`](./files/environments) is expected to provide non-secret environment settings such as:
@@ -190,13 +261,14 @@ Each file in [`files/environments/`](./files/environments) is expected to provid
 
 - the root Terraform backend block contains placeholder values locally; the GitHub Actions workflow overrides backend settings during `terraform init`
 - the workflow maps `production` requests to `files/environments/prod.tfvars`
+- `files/terraform.tfvars` is not part of the workflow-driven demo path
 - the repo includes additional design docs and Mermaid diagrams at the repository root
 - raw Mermaid text does not render on GitHub; diagrams in this repo are now fenced with `mermaid` blocks for GitHub compatibility
 
 ## Additional Docs
 
 - [`END_TO_END_EXPLANATION.md`](./END_TO_END_EXPLANATION.md)
-- [`DEMO_SETUP.md`](./DEMO_SETUP.md)
+- [`demo_setup.md`](./demo_setup.md)
 - [`idp-provisioning-workflow.md`](./idp-provisioning-workflow.md)
 - [`internal-tf-module-execution-layer.md`](./internal-tf-module-execution-layer.md)
 - [`governance-security.md`](./governance-security.md)

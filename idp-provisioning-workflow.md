@@ -23,5 +23,14 @@ flowchart TD
     M --> N[Terraform apply executed]
     N --> O[Resource provisioned using standard modules]
     O --> P[State stored in remote backend<br/>S3 and DynamoDB locking]
-    P --> Q[Monitoring and logging attached automatically]
+    P --> Q[Outputs written to Vault<br/>secret/idp/environment/tenant]
+    Q --> R[Gmail summary sent]
 ```
+
+Workflow notes:
+
+- this project is intended to run through GitHub Actions, not local Terraform execution
+- pull requests run validation and `terraform plan`
+- merge to `main` plus GitHub Environment approval allows `terraform apply`
+- `production` uses the `idp-production` environment
+- `dev`, `test`, `qa`, and `staging` use `idp-nonprod`

@@ -43,6 +43,13 @@ You need a GitHub repository with:
 - required status checks configured if you want PRs blocked until validation passes
 - GitHub Environments configured if you want controlled approval before apply
 
+The intended operating model for this repository is GitHub Actions first:
+
+- developers edit `files/infra-management/infra.yaml`
+- pull requests run validation and `terraform plan`
+- merge plus GitHub Environment approval enables `terraform apply`
+- local Terraform execution is optional for development, but it is not the demo path
+
 Recommended GitHub operating model:
 
 - feature branches are created by developers
@@ -116,11 +123,35 @@ The workflow assumes GitHub Actions can assume a role like:
 
 That role must be allowed to:
 
+- trust the GitHub OIDC provider and allow `sts:AssumeRoleWithWebIdentity`
 - read and write Terraform state in S3
 - use the DynamoDB lock table
 - create and manage the AWS services this Terraform stack provisions
 - create networking attachments that these modules require
 - create IAM resources referenced by the modules
+
+In practical terms, the role needs:
+
+- S3 backend actions:
+  - `s3:ListBucket`
+  - `s3:GetBucketLocation`
+  - `s3:GetObject`
+  - `s3:PutObject`
+  - `s3:DeleteObject`
+- DynamoDB lock actions:
+  - `dynamodb:DescribeTable`
+  - `dynamodb:GetItem`
+  - `dynamodb:PutItem`
+  - `dynamodb:UpdateItem`
+  - `dynamodb:DeleteItem`
+- Provisioning access across the services used in this repo:
+  - EC2
+  - RDS
+  - ElastiCache
+  - IAM
+  - S3
+  - CloudWatch
+  - KMS if you provide customer-managed keys
 
 ## 3.4 Terraform backend prerequisites
 
@@ -149,6 +180,15 @@ You therefore need:
 - a valid `VAULT_TOKEN`
 - policy permissions allowing writes under the chosen path pattern
 
+Preparation sequence:
+
+1. Create or start Vault.
+2. Initialize and unseal it if needed.
+3. Enable KV v2 at `secret/`.
+4. Create an automation policy with access to `secret/data/idp/*` and `secret/metadata/idp/*`.
+5. Create a token for GitHub Actions to use.
+6. Store `VAULT_ADDRESS` and `VAULT_TOKEN` in GitHub Secrets.
+
 The platform stores generated or discovered values in Vault under a path like:
 
 `secret/idp/<environment>/<tenant>`
@@ -162,6 +202,15 @@ You need:
 - a Gmail account that can send the notification email
 - a Gmail App Password
 - SMTP access to `smtp.gmail.com:465`
+
+Preparation sequence:
+
+1. Sign in to the sender Gmail account.
+2. Enable 2-Step Verification.
+3. Open Google Account `Security`.
+4. Open `App passwords`.
+5. Create a Mail app password for this workflow.
+6. Store the sender email and app password in GitHub Secrets.
 
 Even though SNS alarm actions are commented out for demo mode, Gmail notification is still part of the post-provisioning flow.
 
@@ -178,6 +227,19 @@ Examples:
 - `default_rds_backup_retention_days`
 - allowed size lists
 - `global_tags`
+
+Important network requirement:
+
+- at least two private subnet IDs are required
+- recommended placement is two private subnets in different Availability Zones
+
+Environment significance:
+
+- `dev` is for early development
+- `test` is for integration validation
+- `qa` is for broader pre-release verification
+- `staging` is for production-like checks
+- `production` is the live deployment path and maps to stricter approval
 
 For demo mode in this repo:
 
