@@ -1,9 +1,12 @@
 variable "tenant_name" { type = string }
 variable "environment" { type = string }
 variable "team_email" { type = string }
-variable "channel_id" { type = string }
 
-variable "slack_bot_token" {
+variable "gmail_sender_email" {
+  type = string
+}
+
+variable "gmail_app_password" {
   type      = string
   sensitive = true
 }

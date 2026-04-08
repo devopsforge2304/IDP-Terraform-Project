@@ -27,15 +27,15 @@ variable "vault_token" {
   sensitive   = true
 }
 
-variable "slack_bot_token" {
-  description = "Slack bot token used for notifications."
+variable "gmail_sender_email" {
+  description = "Gmail address used to send provisioning notifications."
   type        = string
-  sensitive   = true
 }
 
-variable "slack_channel_id" {
-  description = "Slack channel ID that will receive provisioning messages."
+variable "gmail_app_password" {
+  description = "Gmail app password used for SMTP authentication."
   type        = string
+  sensitive   = true
 }
 
 variable "allowed_environments" {

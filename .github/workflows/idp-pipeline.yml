@@ -23,7 +23,7 @@ on:
 
 env:
   TF_VERSION: "1.7.5"
-  AWS_REGION: "ap-south-1"
+  AWS_REGION: "us-east-1"
   TF_WORKING_DIR: "files"
   REQUEST_CONFIG_PATH: "infra-management/infra.yaml"
 

@@ -250,14 +250,14 @@ module "vault_inject" {
   depends_on = [module.rds, module.redis, module.ec2, module.s3]
 }
 
-module "slack_notify" {
-  source = "./modules/slack-notify"
+module "gmail_notify" {
+  source = "./modules/gmail-notify"
 
   tenant_name          = local.tenant_name
   environment          = local.env
   team_email           = trimspace(try(local.config.team_email, ""))
-  channel_id           = var.slack_channel_id
-  slack_bot_token      = var.slack_bot_token
+  gmail_sender_email   = var.gmail_sender_email
+  gmail_app_password   = var.gmail_app_password
   enabled_resources    = local.enabled_resources
   rds_endpoint         = try(module.rds[0].endpoint, "N/A")
   s3_bucket_name       = try(module.s3[0].bucket_name, "N/A")

@@ -90,11 +90,11 @@ What each one is for:
 - `VAULT_TOKEN`
   Token Terraform uses to write outputs and generated secrets into Vault.
 
-- `SLACK_BOT_TOKEN`
-  Token used by the Slack module to send a provisioning summary.
+- `GMAIL_SENDER_EMAIL`
+  Gmail address used by the notification module to send a provisioning summary.
 
-- `SLACK_CHANNEL_ID`
-  Slack channel destination for pipeline/provisioning notifications.
+- `GMAIL_APP_PASSWORD`
+  Gmail app password used by the notification module for SMTP authentication.
 
 ## 3.3 AWS prerequisites
 
@@ -153,17 +153,17 @@ The platform stores generated or discovered values in Vault under a path like:
 
 `secret/idp/<environment>/<tenant>`
 
-## 3.6 Slack prerequisites
+## 3.6 Gmail prerequisites
 
-Slack is also part of the current flow because the root module always calls the `slack-notify` module.
+Gmail notification is also part of the current flow because the root module always calls the `gmail-notify` module.
 
 You need:
 
-- a Slack bot token
-- a valid Slack channel ID
-- the bot invited to that channel
+- a Gmail account that can send the notification email
+- a Gmail App Password
+- SMTP access to `smtp.gmail.com:465`
 
-Even though SNS alarm actions are commented out for demo mode, Slack notification is still part of the post-provisioning flow.
+Even though SNS alarm actions are commented out for demo mode, Gmail notification is still part of the post-provisioning flow.
 
 ## 3.7 Environment configuration prerequisites
 
@@ -255,8 +255,8 @@ Everything operational lives under `files/`.
 - `files/modules/vault-inject/main.tf`
   Writes selected outputs and credentials into Vault.
 
-- `files/modules/slack-notify/main.tf`
-  Sends a Slack summary after provisioning.
+- `files/modules/gmail-notify/main.tf`
+  Sends a Gmail summary after provisioning.
 
 - `files/scripts/policy-check.sh`
   Shell-based policy gate for early validation of `infra-management/infra.yaml`.
@@ -509,7 +509,7 @@ Detailed behavior:
 3. Installs Terraform.
 4. Runs `terraform fmt -check -recursive`.
 5. Runs `terraform init` with backend config supplied from secrets.
-6. Passes secret inputs for Vault and Slack through `TF_VAR_*` environment variables.
+6. Passes secret inputs for Vault and Gmail through `TF_VAR_*` environment variables.
 7. Runs `terraform validate`.
 8. Runs `terraform plan` with the correct environment tfvars file.
 9. Saves the plan as an artifact.
@@ -572,7 +572,7 @@ What it does:
 2. Configures AWS credentials.
 3. Installs Terraform.
 4. Runs `terraform init` with remote backend settings.
-5. Supplies Vault and Slack secrets through `TF_VAR_*` environment variables.
+5. Supplies Vault and Gmail secrets through `TF_VAR_*` environment variables.
 6. Runs `terraform apply -auto-approve` with the matching environment tfvars file.
 
 What this means operationally:
@@ -829,13 +829,13 @@ The root module calls:
 - `module.ec2`
 - `module.s3`
 - `module.vault_inject`
-- `module.slack_notify`
+- `module.gmail_notify`
 
 Important execution idea:
 
 - IAM is foundational
 - workload modules are conditional based on the YAML request
-- Vault and Slack happen after resources exist
+- Vault and Gmail notification happen after resources exist
 
 ## 11. Detailed explanation of every module
 
@@ -965,11 +965,11 @@ Why it matters:
 
 Applications and operators should retrieve important runtime values from Vault rather than hunting through Terraform output manually.
 
-## 11.7 Slack notify module
+## 11.7 Gmail notify module
 
 Purpose:
 
-- send a provisioning summary after Terraform completes
+- send a provisioning summary email after Terraform completes
 
 What it communicates:
 
@@ -982,7 +982,7 @@ What it communicates:
 
 Operational note:
 
-Slack still requires valid secrets in the current design.
+Gmail still requires valid sender credentials in the current design.
 
 ## 12. Explanation of `variables.tf`
 
@@ -1008,8 +1008,8 @@ Examples of variables supplied by secrets:
 
 - `vault_address`
 - `vault_token`
-- `slack_bot_token`
-- `slack_channel_id`
+- `gmail_sender_email`
+- `gmail_app_password`
 
 ## 13. Explanation of environment tfvars files
 
@@ -1048,7 +1048,7 @@ After apply:
 - Terraform state is stored in the remote S3 backend
 - state locking is released in DynamoDB
 - infrastructure outputs are written to Vault
-- a Slack summary is sent
+- a Gmail summary is sent
 - the merged PR plus workflow run form the audit trail
 
 ## 15. What happens if something fails
@@ -1106,7 +1106,7 @@ A simple way to understand the project is:
 - GitHub Environments provide deployment approval
 - Terraform state in S3 is the source of truth for managed resources
 - Vault is the secret/output handoff layer
-- Slack is the notification layer
+- Gmail is the notification layer
 
 ## 17. End-to-end sequence in one continuous story
 
@@ -1134,12 +1134,12 @@ Here is the full story in one pass.
 20. `terraform-apply` runs after approval.
 21. Terraform reads the merged `infra-management/infra.yaml` from `main`.
 22. Terraform loads the matching environment tfvars file.
-23. Terraform uses secret inputs for Vault and Slack from GitHub secrets.
+23. Terraform uses secret inputs for Vault and Gmail from GitHub secrets.
 24. `main.tf` validates the request and orchestrates the modules.
 25. IAM is created first.
 26. Requested workload modules are created next.
 27. Outputs and credentials are written into Vault.
-28. Slack notification is sent.
+28. Gmail notification is sent.
 29. Terraform state is updated in S3 and unlocked in DynamoDB.
 30. Later, the scheduled drift detection job checks whether real infrastructure still matches code.
 
@@ -1156,7 +1156,7 @@ It combines:
 - environment-specific defaults through `environments/*.tfvars`
 - deployment control through GitHub Actions and GitHub Environments
 - secret/output handling through Vault
-- operational visibility through Slack
+- operational visibility through Gmail
 - safety and consistency through remote Terraform state and locking
 
 If you want this to behave cleanly in a real team, the critical operational controls outside the code are:

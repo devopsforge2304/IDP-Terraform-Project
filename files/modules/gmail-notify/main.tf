@@ -1,6 +1,6 @@
 # ============================================================
-# Module: Slack Notification
-# Posts a provisioning summary after successful apply
+# Module: Gmail Notification
+# Emails a provisioning summary after successful apply
 # ============================================================
 
 locals {
@@ -12,21 +12,21 @@ locals {
   ])
 
   message_text = join("\n", compact([
-    "*IDP Provisioning Complete*",
-    "*Tenant:* `${var.tenant_name}` | *Environment:* `${var.environment}`",
-    "*Requested by:* ${var.team_email}",
+    "IDP Provisioning Complete",
+    "Tenant: ${var.tenant_name} | Environment: ${var.environment}",
+    "Requested by: ${var.team_email}",
     "",
-    "*Resources provisioned:*",
+    "Resources provisioned:",
     join("\n", local.resource_lines),
     "",
-    "*Vault path:* `${var.vault_path}`",
-    "*Estimated monthly cost:* ${local.cost_estimate}",
+    "Vault path: ${var.vault_path}",
+    "Estimated monthly cost: ${local.cost_estimate}",
   ]))
 
   cost_estimate = format("$%.2f/month", var.estimated_cost_value)
 }
 
-resource "terraform_data" "slack_message" {
+resource "terraform_data" "gmail_message" {
   input = {
     tenant        = var.tenant_name
     env           = var.environment
@@ -42,14 +42,25 @@ resource "terraform_data" "slack_message" {
 
   provisioner "local-exec" {
     command = <<EOF
-curl -s -X POST https://slack.com/api/chat.postMessage \
-  -H "Authorization: Bearer ${var.slack_bot_token}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "channel": "${var.channel_id}",
-    "text": "${replace(local.message_text, "\"", "\\\"")}",
-    "mrkdwn": true
-  }'
+tmp_email_file="$(mktemp)"
+
+cat <<'MAIL' > "$tmp_email_file"
+From: ${var.gmail_sender_email}
+To: ${var.team_email}
+Subject: IDP Provisioning Complete - ${var.tenant_name} (${var.environment})
+Content-Type: text/plain; charset=UTF-8
+
+${local.message_text}
+MAIL
+
+curl -s --ssl-reqd \
+  --url "smtps://smtp.gmail.com:465" \
+  --user "${var.gmail_sender_email}:${var.gmail_app_password}" \
+  --mail-from "${var.gmail_sender_email}" \
+  --mail-rcpt "${var.team_email}" \
+  --upload-file "$tmp_email_file"
+
+rm -f "$tmp_email_file"
 EOF
   }
 }

@@ -3,5 +3,5 @@ aws_region = "ap-south-1"
 vault_address = "http://127.0.0.1:8200"
 vault_token   = "demo-vault-token"
 
-slack_bot_token  = "xoxb-demo-token"
-slack_channel_id = "C0123456789"
+gmail_sender_email = "your-team@gmail.com"
+gmail_app_password = "your-16-char-app-password"

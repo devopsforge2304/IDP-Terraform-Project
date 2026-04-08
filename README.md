@@ -8,7 +8,7 @@ This repository implements a GitHub-driven Internal Developer Platform (IDP) for
 - Enforces environment and sizing guardrails before Terraform runs
 - Uses environment-specific `.tfvars` files from [`files/environments/`](./files/environments)
 - Stores provisioned connection details in Vault
-- Posts a provisioning summary with estimated monthly cost to Slack
+- Emails a provisioning summary with estimated monthly cost through Gmail
 - Separates PR-time `plan` from post-merge `apply`
 - Runs scheduled drift detection
 
@@ -25,7 +25,7 @@ Every request also creates or uses:
 
 - a tenant IAM role and instance profile
 - a Vault secret path under `secret/idp/<environment>/<tenant>`
-- a Slack notification summarizing provisioned resources and estimated cost
+- a Gmail notification summarizing provisioned resources and estimated cost
 
 ## Current Pipeline Behavior
 
@@ -58,7 +58,7 @@ flowchart TD
     H --> I[GitHub Environment approval gate]
     I --> J[Terraform apply on main]
     J --> K[Write outputs to Vault]
-    K --> L[Send Slack notification with cost estimate]
+    K --> L[Send Gmail notification with cost estimate]
 ```
 
 ## Environment Model
@@ -152,7 +152,7 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
     │   ├── rds
     │   ├── redis
     │   ├── s3
-    │   ├── slack-notify
+    │   ├── gmail-notify
     │   └── vault-inject
     └── scripts
         └── policy-check.sh
@@ -165,8 +165,8 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
 - `TF_LOCK_TABLE`
 - `VAULT_ADDRESS`
 - `VAULT_TOKEN`
-- `SLACK_BOT_TOKEN`
-- `SLACK_CHANNEL_ID`
+- `GMAIL_SENDER_EMAIL`
+- `GMAIL_APP_PASSWORD`
 
 ## Environment Tfvars Inputs
 
