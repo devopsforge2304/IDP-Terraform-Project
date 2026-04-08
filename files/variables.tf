@@ -16,15 +16,10 @@ variable "private_subnet_ids" {
   default     = []
 }
 
-variable "vault_address" {
-  description = "Vault server address."
+variable "secrets_manager_kms_key_id" {
+  description = "Optional KMS key ID or ARN for encrypting AWS Secrets Manager secrets."
   type        = string
-}
-
-variable "vault_token" {
-  description = "Vault token for demo or automation usage."
-  type        = string
-  sensitive   = true
+  default     = null
 }
 
 variable "gmail_sender_email" {

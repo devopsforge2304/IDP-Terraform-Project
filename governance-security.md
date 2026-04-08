@@ -4,7 +4,7 @@
 flowchart TD
     A[Terraform execution request] --> B[Permission boundary check]
     B --> C[IAM role validation]
-    C --> D[Secrets retrieval<br/>HashiCorp Vault or AWS Secrets Manager]
+    C --> D[Secrets retrieval and storage<br/>AWS Secrets Manager]
     D --> E[Remote state locking]
     E --> F[Drift detection]
     F --> G[Policy compliance engine]

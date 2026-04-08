@@ -100,8 +100,6 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="key=idp/${{ needs.load-config.outputs.environment }}/${{ needs.load-config.outputs.tenant_name }}.tfstate"
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
@@ -115,8 +113,6 @@ jobs:
             -var-file="environments/${{ needs.load-config.outputs.environment == 'production' && 'prod' || needs.load-config.outputs.environment }}.tfvars" \
             -out=tfplan | tee plan.txt
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
@@ -178,8 +174,6 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="key=idp/${{ needs.load-config.outputs.environment }}/${{ needs.load-config.outputs.tenant_name }}.tfstate"
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
@@ -188,8 +182,6 @@ jobs:
           terraform plan -detailed-exitcode -input=false \
             -var-file="environments/${{ needs.load-config.outputs.environment == 'production' && 'prod' || needs.load-config.outputs.environment }}.tfvars"
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
@@ -232,8 +224,6 @@ jobs:
             -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="key=idp/${{ needs.load-config.outputs.environment }}/${{ needs.load-config.outputs.tenant_name }}.tfstate"
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}
 
@@ -242,7 +232,5 @@ jobs:
           terraform apply -auto-approve -input=false \
             -var-file="environments/${{ needs.load-config.outputs.environment == 'production' && 'prod' || needs.load-config.outputs.environment }}.tfvars"
         env:
-          TF_VAR_vault_address: ${{ secrets.VAULT_ADDRESS }}
-          TF_VAR_vault_token: ${{ secrets.VAULT_TOKEN }}
           TF_VAR_gmail_sender_email: ${{ secrets.GMAIL_SENDER_EMAIL }}
           TF_VAR_gmail_app_password: ${{ secrets.GMAIL_APP_PASSWORD }}

@@ -1,13 +1,13 @@
 # Terraform Internal Developer Platform
 
-This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform. Developers submit a single [`infra.yaml`](./files/infra-management/infra.yaml) request, open a pull request, and the platform pipeline validates, plans, approves, and applies infrastructure through standardized Terraform modules. The intended operating model is workflow-only: GitHub Actions runs plan and apply, and local Terraform execution is not required for the demo path.
+This repository implements a GitHub-driven Internal Developer Platform (IDP) for Terraform on AWS. Developers submit a single [`infra.yaml`](./files/infra-management/infra.yaml) request, open a pull request, and the platform validates, plans, approves, and applies infrastructure through standardized Terraform modules.
 
 ## What The Platform Does
 
 - Provisions tenant-scoped AWS infrastructure from one YAML request
 - Enforces environment and sizing guardrails before Terraform runs
 - Uses environment-specific `.tfvars` files from [`files/environments/`](./files/environments)
-- Stores provisioned connection details in Vault
+- Stores provisioned connection details in AWS Secrets Manager
 - Emails a provisioning summary with estimated monthly cost through Gmail
 - Separates PR-time `plan` from post-merge `apply`
 - Runs scheduled drift detection
@@ -24,7 +24,7 @@ The current implementation supports these optional resource blocks in [`files/in
 Every request also creates or uses:
 
 - a tenant IAM role and instance profile
-- a Vault secret path under `secret/idp/<environment>/<tenant>`
+- an AWS Secrets Manager secret named `idp/<environment>/<tenant>`
 - a Gmail notification summarizing provisioned resources and estimated cost
 
 ## Current Pipeline Behavior
@@ -54,7 +54,8 @@ The workflow file is [`idp-pipeline.yml`](./.github/workflows/idp-pipeline.yml).
 
 For this repository:
 
-- workflow secrets supply Vault and Gmail credentials at runtime
+- workflow secrets supply Gmail credentials at runtime
+- AWS credentials from GitHub OIDC are also used to create and update AWS Secrets Manager secrets
 - environment `.tfvars` files supply VPC and subnet IDs
 - at least two private subnets are required
 - `production` requests map to `files/environments/prod.tfvars`
@@ -72,7 +73,7 @@ flowchart TD
     G --> H[Merge pull request]
     H --> I[GitHub Environment approval gate]
     I --> J[Terraform apply on main]
-    J --> K[Write outputs to Vault]
+    J --> K[Write outputs to AWS Secrets Manager]
     K --> L[Send Gmail notification with cost estimate]
 ```
 
@@ -168,7 +169,7 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
     │   ├── redis
     │   ├── s3
     │   ├── gmail-notify
-    │   └── vault-inject
+    │   └── secrets-manager
     └── scripts
         └── policy-check.sh
 ```
@@ -178,8 +179,6 @@ Validation is split between [`files/scripts/policy-check.sh`](./files/scripts/po
 - `AWS_ACCOUNT_ID`
 - `TF_STATE_BUCKET`
 - `TF_LOCK_TABLE`
-- `VAULT_ADDRESS`
-- `VAULT_TOKEN`
 - `GMAIL_SENDER_EMAIL`
 - `GMAIL_APP_PASSWORD`
 
@@ -206,6 +205,7 @@ That role must:
 - trust GitHub OIDC and allow `sts:AssumeRoleWithWebIdentity`
 - access the S3 backend bucket and DynamoDB lock table
 - create and manage the AWS resources used by the Terraform modules
+- create and update AWS Secrets Manager secrets for tenant outputs
 
 At a minimum, backend access must cover:
 
@@ -228,14 +228,15 @@ Provisioning access must cover the services used in this project:
 - IAM, including roles, policies, and instance profiles
 - S3, including bucket policy, encryption, versioning, lifecycle, and public access block
 - CloudWatch alarms
-- KMS if you use customer-managed KMS keys in the environment files
+- Secrets Manager, including `CreateSecret`, `UpdateSecret`, `PutSecretValue`, `DescribeSecret`, `TagResource`, and `GetSecretValue` if operators or follow-on automation need read access
+- KMS if you use customer-managed KMS keys for workload encryption or Secrets Manager encryption
 
-## Vault And Gmail Setup
+## AWS Secrets Manager And Gmail Setup
 
 This repository expects:
 
-- Vault KV v2 mounted at `secret/`
-- Terraform writes to `secret/idp/<environment>/<tenant>`
+- AWS Secrets Manager to store tenant outputs under names like `idp/<environment>/<tenant>`
+- the GitHub Actions AWS role to manage those secrets during Terraform apply
 - a Gmail account with 2-Step Verification enabled
 - a Gmail App Password stored in `GMAIL_APP_PASSWORD`
 
@@ -256,21 +257,11 @@ Each file in [`files/environments/`](./files/environments) is expected to provid
 - `rds_kms_key_id`
 - `ec2_kms_key_id`
 - `s3_kms_key_id`
+- `secrets_manager_kms_key_id`
 
 ## Notes About Current Implementation
 
-- the root Terraform backend block contains placeholder values locally; the GitHub Actions workflow overrides backend settings during `terraform init`
-- the workflow maps `production` requests to `files/environments/prod.tfvars`
-- `files/terraform.tfvars` is not part of the workflow-driven demo path
-- the repo includes additional design docs and Mermaid diagrams at the repository root
-- raw Mermaid text does not render on GitHub; diagrams in this repo are now fenced with `mermaid` blocks for GitHub compatibility
-
-## Additional Docs
-
-- [`END_TO_END_EXPLANATION.md`](./END_TO_END_EXPLANATION.md)
-- [`demo_setup.md`](./demo_setup.md)
-- [`idp-provisioning-workflow.md`](./idp-provisioning-workflow.md)
-- [`internal-tf-module-execution-layer.md`](./internal-tf-module-execution-layer.md)
-- [`governance-security.md`](./governance-security.md)
-- [`e2e-sequence.md`](./e2e-sequence.md)
-- [`env.md`](./env.md)
+- Terraform now uses only the AWS provider for infrastructure and secret storage
+- AWS credentials used for infrastructure provisioning also back the Secrets Manager write path
+- the Gmail notification includes the final secret name and secret ARN so operators know where to retrieve outputs
+- `files/terraform.tfvars` is only a local sample; the intended demo path is GitHub Actions

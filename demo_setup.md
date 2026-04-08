@@ -5,6 +5,7 @@ This guide is the workflow-first setup for this repository. The intended operati
 - developers edit `files/infra-management/infra.yaml`
 - GitHub Actions runs `terraform plan` on pull requests
 - GitHub Actions runs `terraform apply` after merge and environment approval
+- AWS Secrets Manager stores the generated tenant connection details
 - you do not need to run Terraform locally for the demo
 
 ## 1. Create the base accounts
@@ -13,7 +14,6 @@ Create or confirm access to:
 
 - a GitHub repository containing this project
 - an AWS account for the demo
-- a Vault server
 - a Gmail account dedicated to notifications, for example `platform.team.demo@gmail.com`
 
 Also confirm these GitHub repository capabilities are enabled:
@@ -35,6 +35,7 @@ Create these:
 5. A VPC for each environment you plan to support, or one shared VPC model
 6. Private subnets for that VPC
 7. Route tables, NAT, and security controls needed for private resources
+8. Optional KMS keys if you want customer-managed encryption for workloads or AWS Secrets Manager
 
 Example values:
 
@@ -43,6 +44,7 @@ Example values:
 - `TF_LOCK_TABLE = terraform-state-lock`
 - `vpc_id = vpc-0123456789abcdef0`
 - `private_subnet_ids = ["subnet-aaa...", "subnet-bbb..."]`
+- `secrets_manager_kms_key_id = arn:aws:kms:us-east-1:123456789012:key/abcd-1234`
 
 ## 3. Create the GitHub OIDC trust for `GitHubActionsRole`
 
@@ -119,7 +121,7 @@ And these DynamoDB actions:
 
 ### 4.2 Resource provisioning permissions
 
-This repository can create IAM, RDS, Redis, EC2, S3, CloudWatch, and supporting networking/security resources. In practice, `GitHubActionsRole` needs permission to manage:
+This repository can create IAM, RDS, Redis, EC2, S3, CloudWatch, AWS Secrets Manager, and supporting networking/security resources. In practice, `GitHubActionsRole` needs permission to manage:
 
 - `ec2`
   - VPC lookups
@@ -152,19 +154,27 @@ This repository can create IAM, RDS, Redis, EC2, S3, CloudWatch, and supporting 
   - tags
 - `cloudwatch`
   - metric alarms
+- `secretsmanager`
+  - secrets
+  - secret versions
+  - tags
 - `kms`
   - only if you choose to supply customer-managed KMS keys in the environment tfvars
+
+At minimum, the Secrets Manager side should include actions such as:
+
+- `secretsmanager:CreateSecret`
+- `secretsmanager:UpdateSecret`
+- `secretsmanager:PutSecretValue`
+- `secretsmanager:DescribeSecret`
+- `secretsmanager:TagResource`
+- `secretsmanager:GetSecretValue` if people or automation will read the secret with the same role
 
 The easiest demo approach is:
 
 1. Start from a tightly scoped custom policy that covers the above services and the target account/region.
 2. Validate with pull request `plan`.
 3. Add only the missing actions surfaced by Terraform errors.
-
-For a short demo, the role is often split into:
-
-- one policy for backend access
-- one policy for provisioning access
 
 ## 5. Decide how many subnets you need
 
@@ -201,51 +211,57 @@ The workflow builds the state key like this:
 
 That means each tenant and environment combination gets its own state object.
 
-## 7. Create and prepare Vault step by step
+## 7. Prepare AWS Secrets Manager
 
-Vault is required because the root module always writes outputs through the `vault-inject` module.
+AWS Secrets Manager is the platform handoff for outputs and generated credentials.
 
-Create and prepare Vault in this order:
+Terraform writes one secret per tenant request using this naming pattern:
 
-1. Create or start a Vault server.
-2. Initialize and unseal Vault if it is a fresh instance.
-3. Enable the KV v2 secrets engine at `secret/` if it is not already mounted.
-4. Create a policy for the automation token with write access to the IDP path.
-5. Create a token tied to that policy.
-6. Save the Vault address and token in GitHub Secrets.
+- `idp/<environment>/<tenant_name>`
 
-You need these values:
+The secret JSON contains fields such as:
 
-- `VAULT_ADDRESS = http://<vault-host>:8200`
-- `VAULT_TOKEN = hvs.xxxxx`
+- `rds_endpoint`
+- `rds_username`
+- `rds_password`
+- `s3_bucket_name`
+- `redis_endpoint`
+- `ec2_private_ips`
+- `enabled_modules`
+- `provisioned_at`
+- `environment`
+- `tenant`
 
-Terraform writes tenant outputs and generated credentials under:
+Preparation steps:
 
-- `secret/idp/<environment>/<tenant_name>`
+1. Decide whether you want the default AWS-managed key or a customer-managed KMS key.
+2. If you want a customer-managed key, create it and allow the GitHub Actions role to use it.
+3. Add `secrets_manager_kms_key_id` to each environment `.tfvars` file if you use that key.
+4. Grant the GitHub Actions role Secrets Manager permissions.
+5. Decide which humans or downstream apps are allowed to read `idp/<environment>/<tenant_name>` after provisioning.
 
-The automation token should be able to:
+Example IAM policy fragment for the GitHub Actions role:
 
-- create secrets under `secret/data/idp/*`
-- update secrets under `secret/data/idp/*`
-- read metadata under `secret/metadata/idp/*`
-- optionally list metadata under `secret/metadata/idp/*`
-- create the tenant read policy that Terraform manages
-
-Example Vault policy for the automation token:
-
-```hcl
-path "secret/data/idp/*" {
-  capabilities = ["create", "update", "read", "delete", "list"]
-}
-
-path "secret/metadata/idp/*" {
-  capabilities = ["read", "list", "delete"]
-}
-
-path "sys/policies/acl/idp-tenant-*" {
-  capabilities = ["create", "update", "read", "list"]
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:CreateSecret",
+        "secretsmanager:UpdateSecret",
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:TagResource"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:idp/*"
+    }
+  ]
 }
 ```
+
+If you use a customer-managed KMS key, also grant the role the KMS permissions needed for encrypt and decrypt operations.
 
 ## 8. Create the Gmail app password step by step
 
@@ -259,74 +275,19 @@ Create it in this order:
 4. Enable `2-Step Verification` if it is not already enabled.
 5. Return to `Security`.
 6. Open `App passwords`.
-7. Choose `Mail` as the app.
-8. Choose `Other` or a custom device name such as `GitHub Actions IDP Demo`.
-9. Generate the password.
-10. Copy the 16-character app password Google shows.
-11. Store that value in the GitHub secret `GMAIL_APP_PASSWORD`.
+7. Create a password for Mail.
+8. Save the generated 16-character password.
 
-Also store:
+You need these values:
 
 - `GMAIL_SENDER_EMAIL = platform.team.demo@gmail.com`
+- `GMAIL_APP_PASSWORD = <16-character app password>`
 
-Important note:
+## 9. Create the environment tfvars files
 
-- store the app password value itself in GitHub Secrets
-- if Google displays it with spaces, that is fine; GitHub can store it exactly as shown
+Each file under `files/environments/` should contain non-secret, environment-specific values.
 
-## 9. Create GitHub repository secrets
-
-In the GitHub repository, create these secrets:
-
-- `AWS_ACCOUNT_ID`
-- `TF_STATE_BUCKET`
-- `TF_LOCK_TABLE`
-- `VAULT_ADDRESS`
-- `VAULT_TOKEN`
-- `GMAIL_SENDER_EMAIL`
-- `GMAIL_APP_PASSWORD`
-
-These are the secret values the current workflow injects into Terraform.
-
-## 10. Create GitHub Environments and understand why they matter
-
-Create these GitHub Environments:
-
-- `idp-nonprod`
-- `idp-production`
-
-Recommended setup:
-
-- add required reviewers to `idp-production`
-- optionally add required reviewers to `idp-nonprod`
-- optionally scope environment secrets to these environments if you later want stronger separation
-
-The significance of the GitHub Environments in this repo is:
-
-- they act as the deployment approval gate after merge
-- the workflow maps `production` requests to `idp-production`
-- the workflow maps `dev`, `test`, `qa`, and `staging` to `idp-nonprod`
-- reviewers approve the deployment job, not just the pull request
-- this creates an auditable separation between code review and deployment authorization
-
-In other words:
-
-- PR review decides whether the change is acceptable
-- GitHub Environment approval decides whether the workflow is allowed to apply it
-
-## 11. Fill the environment tfvars files
-
-The current design expects network and environment configuration in the Terraform env files under `files/environments/`.
-
-For each environment file such as:
-
-- `files/environments/dev.tfvars`
-- `files/environments/test.tfvars`
-- `files/environments/qa.tfvars`
-- `files/environments/staging.tfvars`
-- `files/environments/prod.tfvars`
-
-Set or review these non-secret values:
+Typical fields:
 
 - `aws_region`
 - `vpc_id`
@@ -336,122 +297,141 @@ Set or review these non-secret values:
 - `allowed_rds_instance_classes`
 - `allowed_redis_node_types`
 - `allowed_ec2_instance_types`
+- `monitor_alarm_actions`
 - `global_tags`
-- optional `monitor_alarm_actions`
-- optional `rds_kms_key_id`
-- optional `ec2_kms_key_id`
-- optional `s3_kms_key_id`
+- `rds_kms_key_id`
+- `ec2_kms_key_id`
+- `s3_kms_key_id`
+- `secrets_manager_kms_key_id`
 
-Environment significance in this repository:
+## 10. Add GitHub repository secrets
 
-- `dev`
-  - early team testing and fast feedback
-- `test`
-  - integration checks and functional validation
-- `qa`
-  - broader validation before staging or release signoff
-- `staging`
-  - production-like pre-release verification
-- `production`
-  - real deployment path with stricter approval expectations
+Create these repository secrets in GitHub:
 
-Workflow mapping detail:
+- `AWS_ACCOUNT_ID`
+- `TF_STATE_BUCKET`
+- `TF_LOCK_TABLE`
+- `GMAIL_SENDER_EMAIL`
+- `GMAIL_APP_PASSWORD`
 
-- a request with `environment: production` uses `files/environments/prod.tfvars`
-- every other environment uses `files/environments/<environment>.tfvars`
+Only the GitHub secrets listed above are required for the workflow configuration.
 
-## 12. Do you need GitHub secrets for VPC and subnet IDs?
+## 11. Create GitHub Environments
 
-For the current codebase: no.
+Create these environments:
 
-Right now:
+- `idp-nonprod`
+- `idp-production`
 
-- `vpc_id` comes from the environment `.tfvars` files
-- `private_subnet_ids` come from the environment `.tfvars` files
-- the workflow does not pass `TF_VAR_vpc_id`
-- the workflow does not pass `TF_VAR_private_subnet_ids`
+Recommended protections:
 
-So for the current implementation, update the environment tfvars files rather than GitHub secrets.
+- required reviewers for `idp-production`
+- optional required reviewers for `idp-nonprod`
+- deployment branch restrictions if you want tighter control
 
-## 13. Ignore local fallback tfvars for this demo
+The workflow maps:
 
-`files/terraform.tfvars` exists only as a placeholder or local fallback.
+- `production` -> `idp-production`
+- `dev`, `test`, `qa`, `staging` -> `idp-nonprod`
 
-For your operating model:
+## 12. Test with a sample request
 
-- do not depend on it
-- do not treat it as the source of truth
-- GitHub Actions is the source of truth for secret injection
+Update `files/infra-management/infra.yaml` with a safe non-production request and open a pull request.
 
-The workflow passes these values at runtime:
+Expected PR behavior:
 
-- `TF_VAR_vault_address`
-- `TF_VAR_vault_token`
-- `TF_VAR_gmail_sender_email`
-- `TF_VAR_gmail_app_password`
+1. `load-config` reads `tenant_name` and `environment`.
+2. `validate-request` runs `policy-check.sh`.
+3. `terraform-plan` runs `fmt`, `init`, `validate`, and `plan`.
+4. The plan artifact and PR comment are generated.
 
-## 14. Prepare the request file
+Expected merge behavior:
 
-Before running the workflow, update:
+1. Merge the PR to `main`.
+2. Approve the GitHub Environment deployment if required.
+3. `terraform-apply` provisions the requested resources.
+4. Terraform writes the resulting connection details into AWS Secrets Manager.
+5. Gmail sends the provisioning summary.
 
-- `files/infra-management/infra.yaml`
+## 13. Verify the outputs after apply
 
-Set:
+After a successful apply, verify:
 
-- `tenant_name`
-- `environment`
-- `team_email`
-- required resource blocks under `resources`
+1. the AWS resources exist
+2. the Terraform state object exists in S3
+3. the DynamoDB lock is released
+4. the AWS Secrets Manager secret `idp/<environment>/<tenant_name>` exists
+5. the secret JSON contains the expected endpoints and generated credentials
+6. the email arrived at the target `team_email`
 
-Make sure pull requests modify the same request file the workflow reads:
+Example CLI check:
 
-- `files/infra-management/infra.yaml`
+```bash
+aws secretsmanager get-secret-value \
+  --secret-id idp/staging/acme-corp \
+  --query SecretString \
+  --output text
+```
 
-## 15. Make sure the GitHub runner can reach Vault and Gmail
+## 14. Local demo variables if you still want them
 
-The workflow runs on `ubuntu-latest`, so plan and apply happen from the GitHub-hosted runner unless you later move to self-hosted runners.
+The intended demo path is GitHub Actions, but `files/terraform.tfvars` now only needs local values for:
 
-Confirm:
+- `aws_region`
+- optional `secrets_manager_kms_key_id`
+- `gmail_sender_email`
+- `gmail_app_password`
 
-1. the runner can reach `VAULT_ADDRESS`
-2. outbound TCP access to `smtp.gmail.com:465` is not blocked
-3. Vault policy and token are valid
+AWS credentials for local testing would come from your normal AWS CLI or environment configuration.
+
+## 15. Make sure the GitHub runner can reach AWS and Gmail
+
+For a GitHub-hosted runner, the important checks are:
+
+1. the runner can assume `GitHubActionsRole`
+2. the AWS role can access S3, DynamoDB, Terraform-managed services, and Secrets Manager
+3. the runner can reach `smtp.gmail.com:465`
 4. Gmail credentials are valid
 
-If you later move to self-hosted runners, also confirm:
+If you use self-hosted runners, also verify:
 
-- DNS resolution works
-- NAT or internet egress exists
-- host firewalls allow outbound traffic
-- proxy rules do not block Gmail SMTP or Vault access
+- outbound network access to AWS APIs and Gmail SMTP
+- proxy rules do not block AWS or Gmail
+- the runner clock is correct for OIDC and TLS
 
-## 16. First validation steps before demoing
+## 16. End-to-end flow summary
 
-Run through this order:
+1. A developer updates `files/infra-management/infra.yaml`.
+2. A PR triggers validation and Terraform plan.
+3. Reviewers inspect the YAML and plan.
+4. The PR is merged to `main`.
+5. GitHub Environment approval gates the deployment.
+6. Terraform applies the infrastructure.
+7. AWS Secrets Manager becomes the secret/output handoff layer.
+8. Gmail sends the summary to the requesting team.
 
-1. Confirm the workflow file uses GitHub Secrets for Vault and Gmail.
-2. Confirm `files/infra-management/infra.yaml` is the request file being edited.
-3. Confirm all repository secrets exist.
-4. Confirm `idp-nonprod` and `idp-production` GitHub Environments exist.
-5. Confirm `GitHubActionsRole` can be assumed by GitHub Actions.
-6. Confirm the target environment `.tfvars` file has a valid `vpc_id` and at least two private subnets.
-7. Confirm Vault is reachable and the token can write to `secret/idp/...`.
-8. Confirm Gmail SMTP authentication works with the app password.
-9. Open a pull request that changes `files/infra-management/infra.yaml`.
-10. Verify `validate-request` and `terraform-plan` succeed.
-11. Merge to `main`.
-12. Approve the deployment in the correct GitHub Environment if approval is required.
-13. Verify `terraform-apply`, Vault write, and Gmail notification succeed.
+## 17. Troubleshooting checklist
 
-## 17. Quick checklist
+1. Confirm the workflow file uses GitHub Secrets for Gmail.
+2. Confirm the AWS role trust policy allows your repository and event pattern.
+3. Confirm the role can access the S3 backend bucket and DynamoDB table.
+4. Confirm the role can create and update Secrets Manager secrets under `idp/*`.
+5. Confirm any KMS key policy allows the role to use the configured key.
+6. Confirm `files/environments/<env>.tfvars` contains valid VPC and subnet IDs.
+7. Confirm `policy-check.sh` passes for the request.
+8. Confirm Gmail app password setup is complete.
+9. Verify `terraform-plan`, `terraform-apply`, Secrets Manager write, and Gmail notification succeed.
 
-You need to create first:
+## 18. Final checklist
 
+Before the demo, make sure you have:
+
+- GitHub repository, Actions, and Environments ready
 - AWS OIDC provider and `GitHubActionsRole`
-- Terraform state bucket
-- Terraform lock table
-- environment VPC and at least two private subnets
-- Vault server, policy, and token
+- S3 backend bucket and DynamoDB lock table
+- VPC and at least two private subnets
+- Secrets Manager permissions and optional KMS key setup
 - Gmail sender account and app password
-- GitHub Secrets
-- GitHub Environments
+- environment `.tfvars` files populated
+- repository secrets configured
+- a test `infra.yaml` request ready

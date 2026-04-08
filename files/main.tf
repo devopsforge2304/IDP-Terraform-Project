@@ -15,10 +15,6 @@ terraform {
       source  = "hashicorp/random"
       version = "~> 3.6"
     }
-    vault = {
-      source  = "hashicorp/vault"
-      version = "~> 3.0"
-    }
   }
 
   backend "s3" {
@@ -36,11 +32,6 @@ provider "aws" {
   default_tags {
     tags = local.mandatory_tags
   }
-}
-
-provider "vault" {
-  address = var.vault_address
-  token   = var.vault_token
 }
 
 locals {
@@ -234,18 +225,20 @@ module "s3" {
   depends_on     = [module.iam]
 }
 
-module "vault_inject" {
-  source = "./modules/vault-inject"
+module "secrets_manager" {
+  source = "./modules/secrets-manager"
 
-  tenant_name     = local.tenant_name
-  environment     = local.env
-  rds_endpoint    = try(module.rds[0].endpoint, "")
-  rds_username    = try(module.rds[0].username, "")
-  rds_password    = try(module.rds[0].password, "")
-  s3_bucket_name  = try(module.s3[0].bucket_name, "")
-  redis_endpoint  = try(module.redis[0].endpoint, "")
-  ec2_private_ips = try(module.ec2[0].private_ips, [])
-  enabled_modules = local.enabled_resources
+  tenant_name                = local.tenant_name
+  environment                = local.env
+  rds_endpoint               = try(module.rds[0].endpoint, "")
+  rds_username               = try(module.rds[0].username, "")
+  rds_password               = try(module.rds[0].password, "")
+  s3_bucket_name             = try(module.s3[0].bucket_name, "")
+  redis_endpoint             = try(module.redis[0].endpoint, "")
+  ec2_private_ips            = try(module.ec2[0].private_ips, [])
+  enabled_modules            = local.enabled_resources
+  secrets_manager_kms_key_id = var.secrets_manager_kms_key_id
+  tags                       = local.mandatory_tags
 
   depends_on = [module.rds, module.redis, module.ec2, module.s3]
 }
@@ -263,8 +256,9 @@ module "gmail_notify" {
   s3_bucket_name       = try(module.s3[0].bucket_name, "N/A")
   redis_endpoint       = try(module.redis[0].endpoint, "N/A")
   ec2_private_ips      = try(module.ec2[0].private_ips, [])
-  vault_path           = module.vault_inject.vault_path
+  secret_name          = module.secrets_manager.secret_name
+  secret_arn           = module.secrets_manager.secret_arn
   estimated_cost_value = local.monthly_cost_estimate
 
-  depends_on = [module.vault_inject]
+  depends_on = [module.secrets_manager]
 }

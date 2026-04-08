@@ -36,3 +36,13 @@ variable "enabled_modules" {
   type    = list(string)
   default = []
 }
+
+variable "secrets_manager_kms_key_id" {
+  type    = string
+  default = null
+}
+
+variable "tags" {
+  type    = map(string)
+  default = {}
+}

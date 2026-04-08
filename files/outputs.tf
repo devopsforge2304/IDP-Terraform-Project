@@ -13,3 +13,11 @@ output "enabled_resources" {
 output "estimated_monthly_cost" {
   value = local.monthly_cost_estimate
 }
+
+output "secret_name" {
+  value = module.secrets_manager.secret_name
+}
+
+output "secret_arn" {
+  value = module.secrets_manager.secret_arn
+}

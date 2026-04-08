@@ -23,7 +23,7 @@ flowchart TD
     M --> N[Terraform apply executed]
     N --> O[Resource provisioned using standard modules]
     O --> P[State stored in remote backend<br/>S3 and DynamoDB locking]
-    P --> Q[Outputs written to Vault<br/>secret/idp/environment/tenant]
+    P --> Q[Outputs written to AWS Secrets Manager<br/>idp/environment/tenant]
     Q --> R[Gmail summary sent]
 ```
 

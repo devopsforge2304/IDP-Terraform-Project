@@ -33,5 +33,6 @@ variable "ec2_private_ips" {
   default = []
 }
 
-variable "vault_path" { type = string }
+variable "secret_name" { type = string }
+variable "secret_arn" { type = string }
 variable "estimated_cost_value" { type = number }
