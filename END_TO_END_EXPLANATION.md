@@ -70,8 +70,8 @@ The current pipeline expects these repository or environment secrets:
 - `TF_LOCK_TABLE`
 - `VAULT_ADDRESS`
 - `VAULT_TOKEN`
-- `SLACK_BOT_TOKEN`
-- `SLACK_CHANNEL_ID`
+- `GMAIL_SENDER_EMAIL`
+- `GMAIL_APP_PASSWORD`
 
 What each one is for:
 
