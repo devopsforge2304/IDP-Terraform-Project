@@ -1,0 +1,29 @@
+tenant_name: acme-corp
+environment: dev
+team_email: devopsforge2304@gmail.com
+data_sensitivity: internal
+
+#resources updated for demo
+resources:
+  rds:
+    enabled: true
+    instance_class: db.t3.micro
+    db_name: acmecorpdb
+    multi_az: false
+    backup_retention_days: 1
+
+  redis:
+    enabled: false
+    node_type: cache.t3.micro
+    num_nodes: 1
+
+  ec2:
+    enabled: false
+    instance_type: t3.micro
+    instance_count: 1
+    backup_enabled: true
+
+  s3:
+    enabled: false
+    versioning: true
+    lifecycle_days: 90

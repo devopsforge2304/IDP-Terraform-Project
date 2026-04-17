@@ -27,7 +27,6 @@ env:
   TF_WORKING_DIR: "files"
   REQUEST_CONFIG_PATH: "infra-management/infra.yaml"
 
-# Add this entire block here
 permissions:
   id-token: write         # Required for AWS OIDC authentication
   contents: read          # Required for actions/checkout
