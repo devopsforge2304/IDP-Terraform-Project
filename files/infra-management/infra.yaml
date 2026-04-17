@@ -3,6 +3,7 @@ environment: dev
 team_email: devopsforge2304@gmail.com
 data_sensitivity: internal
 
+#resources
 resources:
   rds:
     enabled: true
