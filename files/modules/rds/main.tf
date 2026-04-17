@@ -38,7 +38,7 @@ resource "aws_security_group" "rds" {
 resource "aws_db_instance" "this" {
   identifier                      = "${var.tenant_name}-${var.environment}"
   engine                          = "postgres"
-  engine_version                  = "15.4"
+  engine_version                  = "17.7"
   instance_class                  = var.instance_class
   db_name                         = substr(replace(var.db_name, "-", ""), 0, 63)
   username                        = substr("admin_${replace(var.tenant_name, "-", "_")}", 0, 16)
