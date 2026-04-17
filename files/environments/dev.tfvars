@@ -1,13 +1,13 @@
-aws_region = "ap-south-1"
+aws_region = "us-east-1"
 
-vpc_id = "vpc-0dev123456789abcd"
+vpc_id = "vpc-0e8f0bcc09c90f226"
 
 private_subnet_ids = [
-  "subnet-0dev123456789abcd",
-  "subnet-0dev987654321abcd",
+  "subnet-0af172c4760bcc457",
+  "subnet-0a9b27882a8722f77",
 ]
 
-default_ec2_ami_id                = "ami-0devcheap123456789"
+default_ec2_ami_id                = "ami-098e39bafa7e7303d"
 default_rds_backup_retention_days = 3
 
 allowed_rds_instance_classes = [
