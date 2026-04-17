@@ -54,7 +54,7 @@ resource "aws_db_instance" "this" {
   deletion_protection             = var.environment == "production"
   skip_final_snapshot             = var.environment != "production"
   performance_insights_enabled    = true
-  monitoring_interval             = 60
+  monitoring_interval             = 0
   copy_tags_to_snapshot           = true
   multi_az                        = var.multi_az
   publicly_accessible             = false
