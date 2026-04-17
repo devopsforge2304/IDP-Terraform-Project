@@ -27,6 +27,13 @@ env:
   TF_WORKING_DIR: "files"
   REQUEST_CONFIG_PATH: "infra-management/infra.yaml"
 
+# Add this entire block here
+permissions:
+  id-token: write         # Required for AWS OIDC authentication
+  contents: read          # Required for actions/checkout
+  issues: write           # Required for your github-script PR comment
+  pull-requests: write    # Required for your github-script PR comment
+
 jobs:
   load-config:
     name: Load request config
