@@ -1,10 +1,10 @@
 aws_region = "us-east-1"
 
-vpc_id = "vpc-0e8f0bcc09c90f226"
+vpc_id = "vpc-02cc5c2087281f074"
 
 private_subnet_ids = [
-  "subnet-0af172c4760bcc457",
-  "subnet-0a9b27882a8722f77",
+  "subnet-03a70381c6cf613d7",
+  "subnet-08ddbe9e337530f14",
 ]
 
 default_ec2_ami_id                = "ami-098e39bafa7e7303d"
