@@ -10,4 +10,5 @@ terraform init -input=false \
   -backend-config="key=idp/dev/acme-corp.tfstate"
 
 terraform destroy -input=false \
-  -var-file="environments/dev.tfvars"
+  -var-file="environments/dev.tfvars" \
+  -lock=false
