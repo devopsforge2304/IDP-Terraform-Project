@@ -18,10 +18,10 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "your-terraform-state-bucket"
+    bucket         = "your-bucket-name"
     key            = "idp/tenants/terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "terraform-state-lock"
+    dynamodb_table = "dynamnodb-table-name"
     encrypt        = true
   }
 }

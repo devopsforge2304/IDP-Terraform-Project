@@ -65,27 +65,28 @@ Example trust policy shape:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::<AWS_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": [
-            "repo:<ORG>/<REPO>:ref:refs/heads/main",
-            "repo:<ORG>/<REPO>:pull_request"
-          ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "GitHubOidcTrust",
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::492646066724:oidc-provider/token.actions.githubusercontent.com"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                },
+                "StringLike": {
+                    "token.actions.githubusercontent.com:sub": [
+                        "repo:<ORG/USERNAME>/IDP-Terraform-Project:ref:refs/heads/main",
+                        "repo:<ORG/USERNAME>/IDP-Terraform-Project:pull_request"
+                    ]
+                }
+            }
         }
-      }
-    }
-  ]
+    ]
 }
 ```
 
@@ -94,6 +95,198 @@ Adjust `<ORG>` and `<REPO>` to your repository.
 ## 4. Grant the required permissions to `GitHubActionsRole`
 
 The role needs enough access for both the backend and the resources provisioned by this Terraform project.
+
+### Custom Permission Policy 
+
+```
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Sid": "TerraformStateS3",
+			"Effect": "Allow",
+			"Action": [
+				"s3:ListBucket",
+				"s3:GetBucketLocation"
+			],
+			"Resource": "arn:aws:s3:::internal-developers-platoform-terraform-state-bucket"
+		},
+		{
+			"Sid": "TerraformStateObjects",
+			"Effect": "Allow",
+			"Action": [
+				"s3:GetObject",
+				"s3:PutObject",
+				"s3:DeleteObject"
+			],
+			"Resource": "arn:aws:s3:::internal-developers-platoform-terraform-state-bucket/idp/*"
+		},
+		{
+			"Sid": "TerraformLockTable",
+			"Effect": "Allow",
+			"Action": [
+				"dynamodb:DescribeTable",
+				"dynamodb:GetItem",
+				"dynamodb:PutItem",
+				"dynamodb:UpdateItem",
+				"dynamodb:DeleteItem"
+			],
+			"Resource": "arn:aws:dynamodb:us-east-1:492646066724:table/idp-terraform-lock-table"
+		},
+		{
+			"Sid": "EC2Access",
+			"Effect": "Allow",
+			"Action": [
+				"ec2:Describe*",
+				"ec2:CreateSecurityGroup",
+				"ec2:DeleteSecurityGroup",
+				"ec2:AuthorizeSecurityGroupIngress",
+				"ec2:AuthorizeSecurityGroupEgress",
+				"ec2:RevokeSecurityGroupIngress",
+				"ec2:RevokeSecurityGroupEgress",
+				"ec2:RunInstances",
+				"ec2:TerminateInstances",
+				"ec2:StartInstances",
+				"ec2:StopInstances",
+				"ec2:CreateTags",
+				"ec2:DeleteTags",
+				"ec2:CreateSnapshot",
+				"ec2:DeleteSnapshot"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "RDSAccess",
+			"Effect": "Allow",
+			"Action": [
+				"rds:Describe*",
+				"rds:CreateDBInstance",
+				"rds:ModifyDBInstance",
+				"rds:DeleteDBInstance",
+				"rds:CreateDBSubnetGroup",
+				"rds:ModifyDBSubnetGroup",
+				"rds:DeleteDBSubnetGroup",
+				"rds:AddTagsToResource",
+				"rds:ListTagsForResource"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "ElastiCacheAccess",
+			"Effect": "Allow",
+			"Action": [
+				"elasticache:Describe*",
+				"elasticache:CreateCacheCluster",
+				"elasticache:ModifyCacheCluster",
+				"elasticache:DeleteCacheCluster",
+				"elasticache:CreateCacheSubnetGroup",
+				"elasticache:ModifyCacheSubnetGroup",
+				"elasticache:DeleteCacheSubnetGroup",
+				"elasticache:AddTagsToResource",
+				"elasticache:ListTagsForResource"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "IAMAccessForTenantResources",
+			"Effect": "Allow",
+			"Action": [
+				"iam:GetRole",
+				"iam:CreateRole",
+				"iam:DeleteRole",
+				"iam:UpdateRole",
+				"iam:AttachRolePolicy",
+				"iam:DetachRolePolicy",
+				"iam:PutRolePolicy",
+				"iam:DeleteRolePolicy",
+				"iam:GetPolicy",
+				"iam:CreatePolicy",
+				"iam:DeletePolicy",
+				"iam:GetPolicyVersion",
+				"iam:CreatePolicyVersion",
+				"iam:DeletePolicyVersion",
+				"iam:GetInstanceProfile",
+				"iam:CreateInstanceProfile",
+				"iam:DeleteInstanceProfile",
+				"iam:AddRoleToInstanceProfile",
+				"iam:RemoveRoleFromInstanceProfile",
+				"iam:TagRole",
+				"iam:TagPolicy",
+				"iam:ListRolePolicies",
+				"iam:ListAttachedRolePolicies",
+				"iam:ListInstanceProfilesForRole",
+				"iam:TagInstanceProfile",
+				"iam:PassRole",
+				"iam:CreateServiceLinkedRole"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "GeneralIAMList",
+			"Effect": "Allow",
+			"Action": [
+				"iam:ListRoles",
+				"iam:ListPolicies"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "S3ProvisioningAccess",
+			"Effect": "Allow",
+			"Action": [
+				"s3:CreateBucket",
+				"s3:DeleteBucket",
+				"s3:GetBucketLocation",
+				"s3:GetBucketPolicy",
+				"s3:PutBucketPolicy",
+				"s3:DeleteBucketPolicy",
+				"s3:GetEncryptionConfiguration",
+				"s3:PutEncryptionConfiguration",
+				"s3:GetBucketVersioning",
+				"s3:PutBucketVersioning",
+				"s3:GetLifecycleConfiguration",
+				"s3:PutLifecycleConfiguration",
+				"s3:PutBucketPublicAccessBlock",
+				"s3:GetBucketPublicAccessBlock",
+				"s3:PutBucketTagging",
+				"s3:GetBucketTagging"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "CloudWatchAccess",
+			"Effect": "Allow",
+			"Action": [
+				"cloudwatch:PutMetricAlarm",
+				"cloudwatch:DeleteAlarms",
+				"cloudwatch:DescribeAlarms",
+				"cloudwatch:ListTagsForResource",
+				"cloudwatch:TagResource",
+				"cloudwatch:UntagResource"
+			],
+			"Resource": "*"
+		},
+		{
+			"Sid": "SecretsManagerAccess",
+			"Effect": "Allow",
+			"Action": [
+				"secretsmanager:CreateSecret",
+				"secretsmanager:UpdateSecret",
+				"secretsmanager:PutSecretValue",
+				"secretsmanager:DescribeSecret",
+				"secretsmanager:DeleteSecret",
+				"secretsmanager:TagResource",
+				"secretsmanager:UntagResource",
+				"secretsmanager:GetSecretValue",
+				"secretsmanager:GetResourcePolicy",
+				"secretsmanager:PutResourcePolicy",
+				"secretsmanager:DeleteResourcePolicy"
+			],
+			"Resource": "arn:aws:secretsmanager:us-east-1:492646066724:secret:idp/*"
+		}
+	]
+}
+```
 
 ### 4.1 Backend permissions
 
